@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title></title>
+    <script src="../../jquery.min.js" type="text/javascript" charset="utf-8"></script>
+    <style type="text/css">
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        
+        ul,
+        ol {
+            list-style: none;
+        }
+        
+        body {
+            background-color: #cecbce;
+        }
+        
+        header {
+            width: 100%;
+            height: 69px;
+            line-height: 69px;
+            background-color: #2f322f;
+        }
+        
+        section {
+            width: 840px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        section:nth-child(1) {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        label {
+            color: #fff;
+            font-size: 30px;
+        }
+        
+        #title {
+            float: right;
+            width: 489px;
+            height: 36px;
+            border-radius: 5px;
+            outline: none;
+            border: 0;
+            padding-left: 10px;
+        }
+        
+        h2 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 30px;
+            margin: 10px 0;
+        }
+        
+        #todoCount,
+        #doneCount {
+            margin-right: 10px;
+            width: 20px;
+            height: 30px;
+            border-radius: 8px;
+            background-color: #e5e9fb;
+            font-size: 25px;
+            text-align: center;
+            line-height: 30px;
+        }
+        
+        li {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 42px;
+            border-radius: 5px;
+            border-left: 8px solid #609497;
+            background-color: #fcfffc;
+            font-size: 20px;
+            line-height: 42px;
+            margin: 10px 0;
+        }
+        
+        li>input {
+            width: 28px;
+            height: 28px;
+            margin: 0 15px 0 20px;
+        }
+        
+        li>a {
+            margin-left: auto;
+            margin-right: 10px;
+            text-decoration: none;
+            color: #000000;
+        }
+        
+        ul>li {
+            opacity: .5;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <section>
+            <label for="title">ToDoList</label>
+            <input type="text" name="title" id="title" placeholder="添加ToDo" value="" />
+        </section>
+    </header>
+
+    <section>
+        <h2>正在进行<span id="todoCount"></span></h2>
+        <ol id="todolist" class="demo-box">
+        </ol>
+
+        <h2>已经完成 <span id="doneCount"></span></h2>
+        <ul id="donelist">
+        </ul>
+    </section>
+    <script type="text/javascript">
+        // 1.文本框中输入内容 按下回车 可以生成待办事项
+        // 2.点击待办事项复选框就可以把当前数据添加到已完成事项中去
+        // 3.点击已完成复选框就可以把当前数据添加到待办事项里面
+        // 4.本页内容刷新不会消失
+
+        // 1.刷新页面不会丢失数据 所以要用到本地存储 localStorage
+        // 不管是按下回车还是点击复选框都是把本地存储的数据加载到页面中
+        // 数据存储格式 var todlist = [{tltle:"****",done:false}]
+        // 注意点1：本地存储只能存储字符串类型的数据 因此我们需要把对象转化为字符串形式 JSON.stringify()
+        // 注意点2：获取本地存储数据，需要把字符串转化为对象格式我们才能使用里面的数据 JSON.parse()
+        // var todolist = [{
+        // 	title: "我今天学了jquery",
+        // 	done: false
+        // }, {
+        // 	title: "我今天吃饭了",
+        // 	done: false
+        // }]
+        // // 存储时
+        // localStorage.setItem("todo", todolist)
+        // console.log(localStorage.getItem("todo")) //[object Object],[object Object]
+
+        // localStorage.setItem("todo", JSON.stringify(todolist))
+        // console.log(localStorage.getItem("todo")) //[{"title":"我今天学了jquery","done":false},{"title":"我今天吃饭了","done":false}]
+
+        // // 获取时
+        // var data = localStorage.getItem("todo")
+        // console.log(data[0] .title)  //undefined
+
+        // data = JSON.parse(data)
+        // console.log(data[0] .title)  //我今天学了jQuery
+
+        // 1.按下回车把新数据添加到本地存储中
+        //利用事件对象keyCode判断用户时候按下回车(13)
+        // 声明一个数组存放数据
+        // 先要读取本地存储中是否有数据 反倒这个数组里面  然后把新数据追加到这个数组里  最后再把数组存导本地存储中
+        load()
+        $("#title").on("keyup", function(e) {
+            if (e.keyCode == 13) {
+                if ($(this).val() == '') {
+                    alert("输入不能为空")
+                } else {
+                    // 先读取本地存储原来的数据
+                    var local = getData()
+
+                    // 把local数组进行更新 把最新的数据追加到数组中去  arr.push()
+                    local.push({
+                        title: $(this).val(),
+                        done: false
+                    })
+
+                    // 把更新后的数组数据添加到本地存储
+                    // localStorage.setItem("todolist",JSON.stringify(local))
+                    saveData(local)
+
+                    // 用函数封装的方法  将本地存储的数据 加载到页面
+                    load()
+                    $(this).val("")
+                }
+
+            }
+        })
+
+        // 2.点击删除删除对应的当前数据  不是删除当前li 而是删除本地存储里的数据
+        // 先获取本地存储的数据 删除对应的数据  保存给本地存储 重新渲染数据
+        $("ol,ul").on("click", "a", function() {
+            // 先获取本地存储
+            var data = getData()
+
+            // li的顺序与对应的本地存储的数据顺序相反 对应的下标和为length-1
+            // $(this).parent().index()
+            // li 的 下标
+            // var index = $("li").index($(this).parent())
+            // 对应的本地存储数据的下标
+            // var dataIndex = data.length - 1 - index
+            //这种方法在单个ol或者ul中可以 一旦已经完成列表中也有东西 就会发生点击这个删除另外一个 
+            // 解决 给a一个自定义属性当作下标 与 本地存储数据匹配(后面给input 加了属性 可以用siblings获取)
+            var dataIndex = $(this).siblings("input").attr("id")
+                // 删除该数据
+            data.splice(dataIndex, 1)
+            saveData(data)
+            load()
+            console.log(data)
+            console.log($("li a"))
+
+        })
+
+        // 3.正在进行和已经完成模块
+        // 点击复选框后 修改本地存储数据 重新渲染
+        // 点击复选框后 先获得本地存储 修改对应的done的值 之后保存数据到本地存储 重新获得数据加载到页面 在load里增加一个条件判断done li放在ul里还是ol里
+        $("ol,ul").on("click", "input", function() {
+            console.log($(this))
+            var data = getData()
+                // 获得与当前复选框对应的数据的下标
+            var index = $(this).attr("id")
+            console.log(index)
+                // 修改当前数据的done的值 为当前复选框的状态
+            data[index].done = $(this).prop("checked")
+            console.log($(this).prop("checked"))
+                // 保存更改后的数据
+            saveData(data)
+                // 重新加载数据
+            load()
+        })
+
+
+
+        // 读取本地存储数据
+        function getData() {
+            var data = localStorage.getItem("todolist")
+            if (data !== null) {
+                // 如果有数据 把数据转化为对象
+                return JSON.parse(data)
+            } else {
+                // 如果没有数据返回一个空数组
+                return [];
+            }
+        }
+        // 把数据添加到本地存储
+        function saveData(arr) {
+            localStorage.setItem("todolist", JSON.stringify(arr))
+        }
+
+        // 把本地存储的数据加载到页面
+        function load() {
+            $("ol").empty() //在每次遍历前先把ol的内容清空 否则会出现真个内容重复出现
+            $("ul").empty() //在每次遍历前先把ol的内容清空 否则会出现真个内容重复出现
+            var data = getData();
+            $.each(data, function(index, content) {
+                var li = $("<li></li>")
+                li.html("<input type='checkbox'/ id = " + index + "><span>" + content.title +
+                        "</span><a href='javascript:;'>删除</a>")
+                    // $("ol").prepend(li)
+                if (content.done) {
+                    // 如果done的值为true 把li放到ul中 且把复选框的状态为勾选状态
+                    $("ul").prepend(li)
+                    $("ul input").prop("checked", true)
+                } else {
+                    $("ol").prepend(li)
+                }
+            })
+
+            //4. 获得待办事项,和已完成的个数
+            $("#todoCount").html($("ol>li").length)
+            $("#doneCount").html($("ul>li").length)
+        }
+    </script>
+</body>
+
+</html>
